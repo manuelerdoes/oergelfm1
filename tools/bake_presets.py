@@ -61,7 +61,7 @@ def p_names():
 
 
 def kept(name):
-    """ui.c param_kept: what a preset load leaves to the track (kept in step with it by hand)"""
+    """params.c param_kept: what a preset load leaves to the track (kept in step with it by hand)"""
     n = P_IDS
     i = n[name]
     return (name in ("P_LEVEL", "P_PAN", "P_MUTE", "P_CHRD", "P_VOIC", "P_SQNT") or n["P_AMODE"] <= i <= n["P_SGATE"]

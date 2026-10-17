@@ -196,6 +196,34 @@ ANALOG → (3) the bounce / audio track.
 - Fetching CC0 samples: python.org Python lacks root certificates, so use
   `SSL_CERT_FILE=/opt/homebrew/etc/ca-certificates/cert.pem python3 tools/fetch_cc0.py SET`.
 
+- **Step 2 (2026-10-17): LADR and MS20 filters** in ANALOG (engines fork, `eng_analog.c`), filter
+  TYPE values 3 and 4 (`params.c N_FTYPE`: LP BP HP LADR MS20):
+  - Both are zero-delay-feedback models built from trapezoidal one-poles (`anl_coef`/`anl_tick`),
+    G Q14, other coefficients Q12, states clamped to ±60000 so every product fits 32 bits.
+    **Each one-pole uses error feedback** (keeps its rounding remainder): without it the fixed-point
+    filters stall at low cutoffs (no self-oscillation below ~150 Hz). With it they match a float
+    model of the same equations at every cutoff. States: s[0] s[1] s[4] s[5], remainders packed in
+    s[6] s[7]; `keep = 0xF3`.
+  - LADR: 4 poles, k 0..5 (self-oscillation from RES ~102), tanh at the input, bass loss half
+    compensated (`AF_LCOMP`). MS20: Korg-35 (Pirkle), K 0.01..2.3 (self-oscillation from RES ~110),
+    tanh inside the loop, passband 1.
+  - LP/BP/HP are bit-identical: their loops are unchanged. The new types run in `analog_render_n`
+    (two specialised copies of `analog_osc`); SYNC/SUB waves go through them in `analog_render_x`.
+    Target cost per loop is about the LP loop's (`tests/target_budget.txt`: analog_render_n 1142
+    for both copies). Flash +~4.5 KB (image ~540 KB, ~41 KB headroom).
+  - `preset_t` has a new `ftype` field (`FTYPE(n)` macro, 0 = LP), applied by `ui.c
+    apply_preset_to` and `tests/hostsim.c host_preset_values`. Presets MOOG BASS, CRYPT PAD (LADR),
+    BAT SCREAM, BLOOD ACID (MS20) are ANALOG 15..18.
+  - `param_kept` moved from ui.c to params.c (the host harness applies baked extras too).
+  - Tests: `tests/sound15_test.c` covers the new types (slopes, ringing at the cutoff via
+    Goertzel, corners, SYNC/SUB, type switching). Listening files: `build/listen/filter_sweep_*.wav`,
+    `build/listen/preset_*.wav`.
+  - `tests/golden.txt` `preset/ANALOG/12_HARPSICHORD` changed 0714b6… → d5c32f92…: the owner
+    baked a tweaked HARPSICHORD (reverb send 40 → 11) on 2026-10-17. It's in
+    `baked_presets.json` and went into commit 8301871; the golden was only updated with step 2.
+    **When a golden changes for a preset nobody touched in code, look at
+    `firmware/src/baked_presets.json` first.** Baked replacements are expected golden changes.
+
 ## Sound design workflow (no hardware needed)
 
 - `tests/hostsim.c` renders one engine/preset to WAV:
@@ -204,7 +232,9 @@ ANALOG → (3) the bounce / audio track.
   `CHORD=4` holds a chord; `SENDS=c,d,r` sets the sends; the last argument `0` = POLY.
 - `PSET=id:value,...` overrides track params. **The ids in hostsim's comment are stale**: today
   P_E0 = 103 (E0..E7 = 103..110), P_ATK 1, P_DEC 2, P_SUS 3, P_REL 4, P_ED_FLT (env→filter) 5,
-  P_REV 36, P_COUNT 111.
+  P_REV 36, P_FTYPE 101, P_COUNT 111. `SWEEP=1` sweeps CUT and RES over the render.
+- `BUDGET_UPDATE=1` rewrites every entry of `tests/target_budget.txt` with small unrelated drifts.
+  To add new functions, add their lines by hand instead.
 - Envelope times (`TIME_MS_X10`): 40 ≈ 18 ms, 50 ≈ 43 ms, 62 ≈ 67 ms, 76 ≈ 266 ms,
   88 ≈ 0.6 s, 98 ≈ 1.2 s, 104 ≈ 1.9 s, 112 ≈ 3.4 s.
 - Judge renders with numbers (level, spectral centroid and RMS over time; numpy is installed),

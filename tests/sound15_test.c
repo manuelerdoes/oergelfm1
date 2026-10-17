@@ -2,7 +2,8 @@
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
 /* Host test of 1.5's sound items (Discussions #104, #175), same sources as the firmware (hostsim.c):
  *   build/host/sound15_test [DEMO_DIR]      (run_tests.sh builds and runs it; demos in build/sound15_demo/)
- * 1. ANALOG's filter TYPE (P_FTYPE, eng_analog.c analog_tap): the parameter (LP BP HP, default LP, not recordable, on
+ * 1. ANALOG's filter TYPE (P_FTYPE, eng_analog.c analog_tap; oergelfm1: LADR and MS20, anl_tick): the parameter (LP BP
+ *    HP LADR MS20, default LP, not recordable, on
  *    EDIT > FILTER), LP untouched (the golden renders: regress.c) and TYPE ignored by every other engine (bit for bit),
  *    the responses (sines through a 1 kHz cutoff: LP falls above it, HP below, BP peaks at it; the three alike at the
  *    cutoff; RES raises BP's peak), bounded and without DC at the corners (RES and DRV 127, low and high notes, every
@@ -185,6 +186,18 @@ static stats_t analog_note(uint32_t w, uint32_t ft, int32_t cut, int32_t res, in
     return stats(FS / 10u);
 }
 
+/* the power of the last analog_note's samples (from 0.1 s) at f Hz (Goertzel), per sample */
+static double tone_power(double f)
+{
+    double c = 2 * cos(2 * M_PI * f / FS), s1 = 0, s2 = 0;
+    uint32_t i, from = FS / 10u;
+    for (i = from; i < NREND * CTL; i++) {
+        double s0 = ren_l[i] + c * s1 - s2;
+        s2 = s1;
+        s1 = s0;
+    }
+    return (s1 * s1 + s2 * s2 - c * s1 * s2) / ((double)(NREND * CTL - from) * (NREND * CTL - from));
+}
 static void type_bp(track_t *t) { t->p[P_FTYPE] = 1; }
 static void type_hp(track_t *t) { t->p[P_FTYPE] = 2; }
 
@@ -192,14 +205,15 @@ static void test_filter(void)
 {
     static const uint8_t NOTE[5] = {36, 60, 84, 108, 120};
     const param_desc_t *d = &TP[P_FTYPE];
-    stats_t r[3][5];
+    stats_t r[5][5];
     uint32_t ft, n, e, cut = 0, same = 1;
     char msg[200];
     track_t *t = &trk[0];
 
-    check("TYPE: a track parameter LP BP HP, default LP (as before), not recordable (a setting)",
-          d->fmt == F_ENUM && d->min == 0 && d->max == 2 && d->def == 0 && str_eq(d->label, "TYPE") &&
-          str_eq(d->names[0], "LP") && str_eq(d->names[1], "BP") && str_eq(d->names[2], "HP") && !motion_param(P_FTYPE));
+    check("TYPE: a track parameter LP BP HP LADR MS20, default LP (as before), not recordable (a setting)",
+          d->fmt == F_ENUM && d->min == 0 && d->max == 4 && d->def == 0 && str_eq(d->label, "TYPE") &&
+          str_eq(d->names[0], "LP") && str_eq(d->names[1], "BP") && str_eq(d->names[2], "HP") &&
+          str_eq(d->names[3], "LADR") && str_eq(d->names[4], "MS20") && !motion_param(P_FTYPE));
     {
         uint32_t i, k = 0;
         for (i = 0; i < NPAGES; i++)
@@ -224,12 +238,12 @@ static void test_filter(void)
     for (n = 1; n < 128u; n++)
         if (abs((int)CUTOFF_HZ[n] - 1047) < abs((int)CUTOFF_HZ[cut] - 1047))
             cut = n;
-    for (ft = 0; ft < 3u; ft++)
+    for (ft = 0; ft < 5u; ft++)
         for (n = 0; n < 5u; n++)
             r[ft][n] = analog_note(3, ft, (int32_t)cut, 0, 0, NOTE[n]);
-    for (ft = 0; ft < 3u; ft++) {
-        snprintf(msg, sizeof msg, "  %s (CUT %u = %u Hz): rms at 65 262 1047 4186 8372 Hz %.0f %.0f %.0f %.0f %.0f",
-                 ft == 0 ? "LP" : ft == 1 ? "BP" : "HP", cut, CUTOFF_HZ[cut], r[ft][0].rms, r[ft][1].rms, r[ft][2].rms,
+    for (ft = 0; ft < 5u; ft++) {
+        snprintf(msg, sizeof msg, "  %-4s (CUT %u = %u Hz): rms at 65 262 1047 4186 8372 Hz %.0f %.0f %.0f %.0f %.0f",
+                 d->names[ft], cut, CUTOFF_HZ[cut], r[ft][0].rms, r[ft][1].rms, r[ft][2].rms,
                  r[ft][3].rms, r[ft][4].rms);
         printf("sound15: %s\n", msg);
     }
@@ -242,6 +256,27 @@ static void test_filter(void)
           r[1][4].rms < r[1][3].rms * 0.7);
     check("at the cutoff the three alike (within 25 %): TYPE keeps the level",
           fabs(r[1][2].rms / r[0][2].rms - 1) < 0.25 && fabs(r[2][2].rms / r[0][2].rms - 1) < 0.25);
+    /* oergelfm1: the ladder 24 dB / octave (-12 dB at its cutoff, four poles of -3 dB), the MS-20 12 dB / octave */
+    check("LADR: flat below the cutoff, -12 dB at it, falling twice as steeply as LP above (24 dB / octave)",
+          fabs(r[3][0].rms / r[3][1].rms - 1) < 0.15 && fabs(r[3][2].rms / r[3][1].rms - 0.25) < 0.08 &&
+          r[3][3].rms < r[0][3].rms * 0.25 && r[3][4].rms < r[3][3].rms * 0.12);
+    check("MS20: flat below the cutoff, falling above it (12 dB / octave), passband as LP's",
+          fabs(r[4][0].rms / r[4][1].rms - 1) < 0.1 && r[4][3].rms < r[4][1].rms * 0.2 && r[4][4].rms < r[4][3].rms * 0.4 &&
+          fabs(r[4][1].rms / r[0][1].rms - 1) < 0.1);
+    {   /* RES 127: both self-oscillate: a 131 Hz sine (C3, in the passband) comes out with a tone at the cutoff (1055 Hz)
+         * that RES 0 does not have; the ladder's passband falls with the resonance, as on the original */
+        double p0[2], p1[2];
+        stats_t q[2];
+        for (n = 0; n < 2u; n++) {
+            (void)analog_note(3, 3u + n, (int32_t)cut, 0, 0, 48);
+            p0[n] = tone_power(CUTOFF_HZ[cut]);
+            q[n] = analog_note(3, 3u + n, (int32_t)cut, 127, 0, 48);
+            p1[n] = tone_power(CUTOFF_HZ[cut]);
+        }
+        snprintf(msg, sizeof msg, "LADR / MS20 at RES 127 ring at the cutoff (+%.0f / +%.0f dB there), bounded (%.0f / %.0f)",
+                 10 * log10(p1[0] / (p0[0] + 1e-9)), 10 * log10(p1[1] / (p0[1] + 1e-9)), q[0].peak, q[1].peak);
+        check(msg, p1[0] > p0[0] * 100 && p1[1] > p0[1] * 100 && q[0].peak < 32767 && q[1].peak < 32767);
+    }
     {
         stats_t q = analog_note(3, 1, (int32_t)cut, 100, 0, 84);
         snprintf(msg, sizeof msg, "BP: RES raises the peak (RES 100 %.0f vs RES 0 %.0f at the cutoff), bounded", q.rms,
@@ -253,7 +288,7 @@ static void test_filter(void)
         static const uint8_t CN[3] = {24, 60, 108}, CC[3] = {0, 70, 127};
         uint32_t w, okc = 1;
         double worst = 0, dc = 0;
-        for (ft = 1; ft < 3u; ft++)
+        for (ft = 1; ft < 5u; ft++)
             for (w = 0; w < 7u; w++)
                 for (n = 0; n < 3u; n++)
                     for (e = 0; e < 3u; e++) {
@@ -263,16 +298,16 @@ static void test_filter(void)
                             dc = fabs(s.mean) / s.rms > dc ? fabs(s.mean) / s.rms : dc;
                         okc &= s.peak < 32767 && (s.rms < 500 || fabs(s.mean) < s.rms * 0.05);
                     }
-        snprintf(msg, sizeof msg, "BP / HP at the corners (7 waves, RES DRV 127): bounded (peak %.0f), no DC (%.3f of rms)",
+        snprintf(msg, sizeof msg, "BP HP LADR MS20 at the corners (7 waves, RES DRV 127): bounded (peak %.0f), no DC (%.3f)",
                  worst, dc);
         check(msg, okc);
         okc = 1;
-        for (ft = 1; ft < 3u; ft++)
+        for (ft = 1; ft < 5u; ft++)
             for (w = 5; w < 7u; w++) {
                 stats_t s = analog_note(w, ft, (int32_t)cut, 30, 0, 57);
                 okc &= s.rms > 200;
             }
-        check("SYNC / SUB through BP and HP: they sound", okc);
+        check("SYNC / SUB through BP HP LADR MS20: they sound", okc);
     }
     /* TYPE turned while a resonant note sounds: the filter's state carries over, bounded */
     {
@@ -284,7 +319,7 @@ static void test_filter(void)
         trk_note_on(t, 45, 120);
         for (k = 0; k < 3u * FS / CTL; k++) {
             if (!(k % 40u))
-                t->p[P_FTYPE] = (int16_t)((k / 40u) % 3u);
+                t->p[P_FTYPE] = (int16_t)((k / 40u) % 5u);
             blocks(1);
             for (i = 0; i < CTL; i++)
                 pk = abs(out_buf[2u * i]) > pk ? abs(out_buf[2u * i]) : pk;

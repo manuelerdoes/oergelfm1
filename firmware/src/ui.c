@@ -1259,15 +1259,7 @@ static void pat_load_ui(track_t *t, uint32_t n)
     ui_say("LOADED ", b);
 }
 
-/* the track's settings, not the sound's: what a sound load (factory or user preset, an engine jump,
- * TOOLS INIT) leaves alone. The mix (LEVEL, PAN, MUTE: the TRACKS faders), the arpeggiator (ARP, ARP 2),
- * the scale and key map (SCL), the pattern parameters (LEN, DIV, SWING, GATE; 1.2: QUANTIZE) and the SLICER
- * insert, which chops whatever the track plays in time with its sequencer */
-static int param_kept(uint32_t i)
-{
-    return i == P_LEVEL || i == P_PAN || i == P_MUTE || (i >= P_AMODE && i <= P_SGATE) ||
-           (i >= P_SLCR && i <= P_SLDEPTH) || i == P_CHRD || i == P_VOIC || i == P_SQNT;
-}
+/* param_kept: params.c (oergelfm1: moved there, the host renders' preset loads use it too) */
 
 /* a retired preset kept as an alias, so stored preset numbers stay valid: SAMPLE 1, once TRANH, is PIANO
  * (tools/gen_samples.py SMP_SET_ORIG). It loads as the original; browsing skips it. -> the preset k stands for.
@@ -1376,6 +1368,8 @@ static void apply_preset_to(track_t *t, uint32_t pi)
         for (i = 0; i < 4u; i++)
             t->p[P_DIST + i] = (int16_t)(pr->fx[i] ? pr->fx[i] - 1 : FX_DEF[i]);
     }
+    if (e->presets[pi].ftype)                         /* oergelfm1: ANALOG's filter TYPE (LP: the default, above) */
+        t->p[P_FTYPE] = (int16_t)(e->presets[pi].ftype - 1u);
     fm6_track_loaded(t);                              /* FM6: the preset's patch (its SLOT) */
     {   /* oergelfm1: a baked preset's values beyond its preset_t (the track's own, param_kept, stay) */
         const baked_t *b = baked_of(t->eng_req % NENGINES, pi);

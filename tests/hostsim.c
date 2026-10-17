@@ -103,7 +103,15 @@ static void host_preset_values(track_t *t, uint32_t e, uint32_t pi, const preset
     t->p[P_VOICE] = p->mono ? V_LEGATO : V_POLY;
     for (i = 0; i < 4u; i++)
         t->p[P_DIST + i] = (int16_t)(p->fx[i] ? p->fx[i] - 1 : FX_DEF[i]);
+    if (p->ftype)                                 /* oergelfm1: ANALOG's filter TYPE */
+        t->p[P_FTYPE] = (int16_t)(p->ftype - 1u);
     fm6_track_loaded(t);                          /* FM6: the preset's patch (ui.c apply_preset_to) */
+    {   /* oergelfm1: a baked preset's values beyond its preset_t (ui.c apply_preset_to) */
+        const baked_t *b = p == &ENGINES[e % NENGINES]->presets[pi] ? baked_of(e, pi) : 0;
+        for (i = 0; b && i < b->nkv; i++)
+            if (b->kv[i].id < P_E0 && !param_kept(b->kv[i].id))
+                t->p[b->kv[i].id] = b->kv[i].v;
+    }
 }
 static void host_preset_req(track_t *t, uint32_t e, uint32_t pi)
 {
