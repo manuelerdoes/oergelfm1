@@ -1,0 +1,34 @@
+{
+ "presets": [
+  {
+   "engine": "ANALOG",
+   "name": "HARPSICHORD",
+   "cat": "KEYS",
+   "replaces": 12,
+   "e": [
+    0,
+    8,
+    64,
+    0,
+    64,
+    15,
+    0,
+    127
+   ],
+   "params": {
+    "P_ATK": 0,
+    "P_DEC": 104,
+    "P_SUS": 0,
+    "P_REL": 62,
+    "P_ED_FLT": 63,
+    "P_DIST": 0,
+    "P_CHOR": 0,
+    "P_DLY": 10,
+    "P_REV": 11,
+    "P_VOICE": 0
+   },
+   "factory_name": "HARPSICHORD",
+   "factory_pat": 3
+  }
+ ]
+}

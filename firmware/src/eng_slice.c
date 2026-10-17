@@ -614,6 +614,9 @@ static void slice_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
 static const preset_t SLICE_PRESETS[] = {
     {"CHOP", {0, 2, 0, 0, SLC_ONE, 0, 127, 127}, {0, 127, 127, 30}, 0, 0, FX(0, 0, 0, 12), PAT(9)},
     {"STUTTER", {0, 1, 0, 0, SLC_GATE, 0, 90, 110}, {0, 127, 127, 12}, 0, 0, FX(10, 0, 20, 10), PAT(10)},
+#ifdef FELUCCA_BAKED_SLICE
+    FELUCCA_BAKED_SLICE   /* oergelfm1: presets baked from the emulator, appended (baked_presets.h, tools/bake_presets.py) */
+#endif
 };
 
 /* the lowest key is slice 0 (C4 + ROOT), no scale */

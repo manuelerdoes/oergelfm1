@@ -438,7 +438,8 @@ static int test_sound_loads(void)
                  preset_pat_hint() == 12 && ui.ppick == 12 && str_eq(PATTERNS[12].name, "ARP"));
     t->p[P_AMODE] = 2;
     before = *t;
-    for (i = 0; i < 6u; i++)                      /* several loads, into the next engine */
+    for (i = before.preset; i < ENGINES[0]->npresets; i++)   /* several loads, into the next engine (oergelfm1: to its end,
+                                                              * not 6: ANALOG has more presets) */
         turn(EN_PRESET, 1);
     bad += check("browsing on, into another engine: the steps still untouched", t->eng_req != before.eng_req &&
                  !memcmp(t->step, before.step, sizeof t->step) && t->p[P_AMODE] == 2);
@@ -490,7 +491,7 @@ static int test_sound_loads(void)
     ui_power_on();
     bad += check("SAMPLE factory browsing has four melodic presets and no PERC",
                  ENGINES[4]->npresets == 4u && str_eq(ENGINES[4]->presets[0].name, "PIANO") &&
-                 str_eq(ENGINES[4]->presets[3].name, "SAX"));
+                 str_eq(ENGINES[4]->presets[3].name, "HARPSI"));
     {   /* TRANH (SET 1, preset 1) is gone: both are PIANO aliases, kept for old data, never offered */
         const param_desc_t *sd = &ENGINES[4]->edit[0];
         uint32_t all, pos, k, e, pos0, shown = 0;
@@ -1421,7 +1422,8 @@ static int test_categories(void)
     for (e = 0; e < NENGINES; e++) {
         const char *c = PRESET_CAT[e];
         if (!eng_ok(e) || e == ENGI_DIGITAL) continue;    /* (DIGITAL: FELUCCA_FM4 builds only, its sounds no category) */
-        ok &= str_len(c) == ENGINES[e]->npresets;
+        /* (oergelfm1: baked presets, baked_presets.h, carry their own category; SAMPLE's string ends at SMP_NPRESETS) */
+        ok &= str_len(c) == (e == ENGI_SAMPLE ? SMP_NPRESETS : ENGINES[e]->npresets - BAKED_N[e]);
         for (k = 0; k < ENGINES[e]->npresets; k++)
             ok &= preset_cat(e, k) >= CAT_BASS && preset_cat(e, k) <= CAT_OTHER;
     }
@@ -1585,10 +1587,13 @@ static int test_display_preferences(void)
                  settings.palette == 6 && T_BG == UI_PALETTES[6].bg && ux.light && ui.menu == 1 && !song.octave &&
                  memcmp(before, host_screen, sizeof before) && !memcmp(sounds, trk, sizeof sounds));
     turn(EN_K1, 1);
-    bad += check("COLOR KNOB 1 steps on to HI-CON, NIGHT (#50: true black), MONO (1.0.2: black and white), then wraps to GREY",
+    bad += check("COLOR KNOB 1 steps on to HI-CON, NIGHT (#50: true black), MONO (1.0.2: black and white), oergelfm1's "
+                 "DRACULA .. CARFAX, then wraps to GREY",
                  settings.palette == 7 && (turn(EN_K1, 1), settings.palette == 8u) && T_BG == 0u &&
                  str_eq(UI_PALETTES[8].name, "NIGHT") && (turn(EN_K1, 1), settings.palette == UI_BW_INDEX) &&
                  str_eq(UI_PALETTES[UI_BW_INDEX].name, "MONO") && T_BG == 0u && T_TEXT == 0xFFFFu &&
+                 (turn(EN_K1, 1), settings.palette == UI_DEFAULT_INDEX) && str_eq(UI_PALETTES[UI_DEFAULT_INDEX].name, "DRACULA") &&
+                 (turn(EN_K1, 1), turn(EN_K1, 1), turn(EN_K1, 1), settings.palette == NPALETTES - 1u) && str_eq(UI_PALETTES[NPALETTES - 1u].name, "CARFAX") &&
                  (turn(EN_K1, 1), settings.palette == UI_GREY_INDEX) && str_eq(UI_PALETTES[UI_GREY_INDEX].name, "GREY"));
     settings.lowcut = 2;
     ui.menu_sel = MI_LOWCUT;
@@ -4096,7 +4101,7 @@ static int test_quick_layers(void)
         }
         ok &= seen == (1u << tot) - 1u && TSEL->preset == 0u && !alias;
         btn_up(B_EDIT); frame();
-        bad += check("  #124 SAMPLE: KNOB 2 right PIANO, FLUTE, SAX (No. 1 2 3), both ways round the list, never the alias", ok);
+        bad += check("  #124 SAMPLE: KNOB 2 right PIANO, FLUTE, HARPSI (No. 1 2 3), both ways round the list, never the alias", ok);
     }
     song.playing = 0;
     lay_combo(B_EDIT, white(LY_INIT));

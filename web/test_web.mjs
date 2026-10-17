@@ -327,7 +327,7 @@ async function editorSamplePresets() {
   const names = E.parse[C.NAMES](await rq(E.req.names(4)));
   await rq(E.req.preset(4, 0));
   const set = E.parse[C.DESC](await rq(E.req.desc(0, info.pe0)));
-  ok(eq(names.names, ["PIANO", "PIANO", "FLUTE", "SAX"]) && eq(set.names.slice(0, 4), ["PIANO", "PIANO", "FLUTE", "SAX"])
+  ok(eq(names.names, ["PIANO", "PIANO", "FLUTE", "HARPSI"]) && eq(set.names.slice(0, 4), ["PIANO", "PIANO", "FLUTE", "HARPSI"])
     && set.names[4] === "PIANO" && eq(set.names.slice(5), ["USR1", "USR2", "USR3"]),
     "SAMPLE: TRANH and PERC removed, SET 1 and 4 kept as PIANO aliases, indices unchanged");
   ok(E.aliasOf(names.names, 1) === 0 && E.aliasOf(names.names, 2) === 2 && E.aliasOf(set.names, 5) === 5 &&
@@ -409,6 +409,17 @@ function mockTables() {
   fw.GP.forEach((d, i) => cmp(`GP[${i}]`, T.GP[i] && norm(T.GP[i]), d));
   cmp("engines", T.ENG.map((e) => e.name), fw.ENG.map((e) => e.name));
   cmp("engine order (ENGINE_ORDER)", E.ENGINE_ORDER.filter((n) => fw.ENG.some((e) => e.name === n)), fw.ORDER);
+  /* oergelfm1: presets baked from the emulator (firmware/src/baked_presets.json, tools/bake_presets.py) are not the
+     mock's: the added ones (the firmware's last; SAMPLE's PERC alias then in its list before them) are left out, a
+     replaced one is compared as the mock has it */
+  const bj = new URL("../firmware/src/baked_presets.json", import.meta.url);
+  const baked = existsSync(bj) ? JSON.parse(readFileSync(bj, "utf8")).presets : [];
+  for (const fe of fw.ENG) {                       /* the added ones: cut; the replaced ones: the mock's own stand in */
+    const n = baked.filter((p) => p.engine === fe.name && p.replaces == null).length;
+    if (n) fe.presets = fe.presets.slice(0, fe.presets.length - n).slice(0, fe.name === "SAMPLE" ? 4 : undefined);
+    const me = T.ENG[fw.ENG.indexOf(fe)];
+    for (const p of baked) if (p.engine === fe.name && p.replaces != null && me && me.presets[p.replaces]) fe.presets[p.replaces] = me.presets[p.replaces];
+  }
   fw.ENG.forEach((fe, i) => {
     const me = T.ENG[i];
     if (!me) return;

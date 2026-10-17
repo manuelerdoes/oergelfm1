@@ -10,7 +10,8 @@ The ADPCM state at the loop start is stored so loops restart exactly.
 
 Libraries:
   cc0        assets/samples-cc0/ (tools/fetch_cc0.py, Versilian Studios, CC0):
-             PIANO, FLUTE, SAX (set 1, once TRANH, and set 4, once PERC, are aliases of PIANO).
+             PIANO, FLUTE, HARPSI (set 1, once TRANH, and set 4, once PERC, are aliases of PIANO).
+             oergelfm1: set 3 was SAX (a tenor sax, looped); it is an English harpsichord (VCSL), its index kept.
              PIANO is the 5-zone piano of 1.0 .. 1.1.5 (1.2 .. 1.4.1 built a reduced 2-zone
              one at 11,025 Hz; 1.5 went back to the full one, the same bytes as 1.1.5)
 SAMPLE's factory presets end before set 4 (SMP_PERC_SLOT); every sample set and SET / USR
@@ -66,11 +67,11 @@ CC0 = SRC / "assets" / "samples-cc0"
 TR = 22050                                   # stored sample rate
 
 # CC0 library: set -> kind ("oneshot" decaying, "sus" looped sustain, "kit" one sample per key)
-# Built-in sets (piano, flute, sax); the other slots of the 8 are for the user (USR1-3, loaded
+# Built-in sets (piano, flute, harpsichord: SAX until oergelfm1); the other slots of the 8 are for the user (USR1-3, loaded
 # from the web editor). TRANH was removed (66 KB of flash); its index 1 stays, an alias of PIANO
 # ("alias": the set named). PERC (the GM kit) was removed (66 KB); its index 4 stays, an alias of
 # PIANO too (PERC_SLOT; its sounds load as the DRUM engine)
-CC0_SETS = [("PIANO", "oneshot"), ("PIANO", "alias"), ("FLUTE", "sus"), ("SAX", "sus"), ("PIANO", "alias")]
+CC0_SETS = [("PIANO", "oneshot"), ("PIANO", "alias"), ("FLUTE", "sus"), ("HARPSI", "oneshot"), ("PIANO", "alias")]
 PERC_SLOT = 4                                # core.h SMP_SET_PERC: SAMPLE's factory presets end before it
 MEASURED_TUNING = ()                         # sets whose recordings are not at A440 (was TRANH, ~+35 ct)
 
@@ -99,9 +100,10 @@ SLC_GRID, SLC_AUTO = 128, 32                # eng_slice.c slc_src_t
 ENV = {"wave":(5, 80, 100, 50), "kit": (0, 127, 127, 60), "multi": (0, 85, 0, 75),
        "oneshot": (0, 127, 127, 70), "sus": (12, 80, 120, 60)}
 
-# PIANO's notes cut to 0.75 s (saves flash), faded out over the last SET_FADE s
-SET_KEEP = {"PIANO": 0.75}
-SET_FADE = {"PIANO": 0.15}
+# PIANO's notes cut to 0.75 s (saves flash), faded out over the last SET_FADE s; HARPSI's to 1.0 s, a longer fade
+# (a plucked string still rings there: the fade is its decay, not a cut)
+SET_KEEP = {"PIANO": 0.75, "HARPSI": 1.0}
+SET_FADE = {"PIANO": 0.15, "HARPSI": 0.35}
 
 _wavs = {}
 
@@ -365,7 +367,9 @@ class Builder:
             pat = ", PAT(12)" if k == "kit" else ""     # a kit: engines.c PATTERNS[11] BEAT
             si = self.alias.get(i, i)                   # an alias: the original's preset (hidden by its name)
             L.append(f'    {{"{name}", {{{si}, 0, 0, {loop}, 127, 0, 0, 0}}, {{{a}, {d}, {s_}, {r}}}, 0, 0{pat}}},')
-        L.append("};")
+        L += ["#ifdef FELUCCA_BAKED_SAMPLE",              # oergelfm1: baked presets (firmware/src/baked_presets.h)
+              "    FELUCCA_BAKED_SAMPLE   /* oergelfm1: presets baked from the emulator, after the PERC alias */",
+              "#endif", "};"]
         orig = [self.alias.get(i, i) for i in range(len(named))]
         L.append("/* SET i plays SMP_SET_ORIG[i]: != i for a retired set kept as an alias (its preset i too) */")
         L.append("static const uint8_t SMP_SET_ORIG[] = {" + ", ".join(map(str, orig)) + "};")

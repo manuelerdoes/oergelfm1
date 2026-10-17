@@ -49,7 +49,14 @@ PALETTES = [
     ("NIGHT",  (0, 0, 0),       (0, 24, 10),     (150, 230, 170), (56, 220, 100),  (255, 255, 255)),
     # 1.0.2: black and white (the derived tokens are set, not blended: bw()); the old MONO is GREY (id 0)
     ("MONO",   (0, 0, 0),       (0, 0, 0),       (255, 255, 255), (255, 255, 255), (255, 255, 255)),
+    # oergelfm1 (the dark-magic theme): appended, ids 10.. Each a near-black with a tint of its own, parchment or
+    # bone text, one identity colour and one active colour
+    ("DRACULA", (14, 4, 8),     (44, 12, 22),    (240, 228, 216), (255, 96, 104),  (255, 200, 96)),    # blood, candle
+    ("CRYPT",   (8, 6, 18),     (28, 22, 48),    (232, 226, 248), (182, 152, 255), (124, 250, 186)),   # moon, ghost
+    ("GRIMOIRE",(16, 10, 4),    (44, 30, 14),    (244, 232, 206), (236, 176, 74),  (255, 104, 96)),    # gold leaf, wax seal
+    ("CARFAX",  (10, 10, 9),    (34, 32, 28),    (230, 224, 206), (206, 196, 168), (255, 70, 70)),     # silver screen, blood
 ]
+DEFAULT = "DRACULA"                # the palette of a first boot (src/panel.c settings_init)
 BW = "MONO"
 BW_GREY = (82, 82, 82)             # MONO's one mid grey (RGB565 10/20/10): DIM LINE RAISE LANE
 # the 20 palettes of the earlier firmware (index order) -> the new palette
@@ -185,6 +192,7 @@ def main():
             v = [to565(c, p[0] == BW) for c in p[1:]]
             out.append(f'    {{"{p[0]}", ' + ", ".join(f"0x{x:04x}" for x in v) + "},")
         out += ["};", f"#define UI_NPALETTES {len(PALETTES)}u", "#define UI_GREY_INDEX 0u",
+                f"#define UI_DEFAULT_INDEX {names.index(DEFAULT)}u          /* {DEFAULT}: a first boot's palette */",
                 f"#define UI_BW_INDEX {names.index(BW)}u          /* MONO: black and white (src/gfx.c palette_set) */",
                 f"#define UI_BW_GREY 0x{to565(BW_GREY):04x}u          /* MONO's one grey: DIM LINE RAISE LANE */",
                 f"#define UI_PAL_TAG {PAL_TAG}u          /* stored id = UI_PAL_TAG + index; below 20: an old id */"]

@@ -70,6 +70,23 @@ kbd { font: 600 11px ui-monospace, Menlo, monospace; border: 1px solid var(--rul
 footer { margin-top: 12px; font-size: 12px; }
 footer nav a { margin: 0 6px; }
 footer small { font-size: 11px; opacity: .8; }
+/* oergelfm1: BAKE (tools/emu_server.py only: hidden on any other server) */
+.bake { margin: 12px 0 0; text-align: center; }
+.bake button, dialog button { font: inherit; padding: 6px 16px; border: 1px solid var(--rule); background: #fff; color: #000;
+                              cursor: pointer; border-radius: 4px; }
+.bake button:disabled, dialog button:disabled { opacity: .5; cursor: progress; }
+dialog { max-width: 34em; width: calc(100% - 32px); border: 0; border-radius: 8px; padding: 20px 24px; }
+dialog::backdrop { background: rgba(0, 0, 0, .55); }
+dialog h2 { margin: 0 0 4px; font-size: 16px; }
+dialog h3 { margin: 16px 0 4px; font-size: 13px; }
+dialog p { margin: 4px 0; color: #444; }
+dialog ul { list-style: none; margin: 0; padding: 0; max-height: 14em; overflow-y: auto; }
+dialog li label { display: flex; gap: 8px; align-items: baseline; padding: 2px 0; flex-wrap: wrap; }
+dialog li select, dialog li input[type=text] { font: inherit; font-size: 12px; }
+dialog li input[type=text] { width: 9em; text-transform: uppercase; }
+dialog li .meta { color: #666; font-size: 12px; }
+dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; flex-wrap: wrap; }
+dialog pre { max-height: 10em; overflow: auto; background: #f2f2f2; padding: 8px; font-size: 11px; white-space: pre-wrap; }
 </style>
 </head>
 <body>
@@ -95,6 +112,24 @@ footer small { font-size: 11px; opacity: .8; }
     <option value="sign">relative sign bit</option>
   </select></span>
 </p>
+
+<p class="bake" id="bake" hidden><button id="bakeopen" type="button">Bake presets into the firmware…</button></p>
+<dialog id="bakedlg" aria-labelledby="baketitle">
+  <h2 id="baketitle">Bake presets</h2>
+  <p>A saved user preset (SAVE &gt; USER) replaces the factory preset you made it from, in the firmware for the FM-1
+     (build/felucca.fwsc) and in this emulator after the rebuild. Pick another one to replace, or add it as a new one.</p>
+  <h3>Your user presets</h3>
+  <ul id="bakeuser"></ul>
+  <h3>Baked into the firmware</h3>
+  <ul id="bakebaked"></ul>
+  <p id="bakemsg" role="status"></p>
+  <pre id="bakelog" hidden></pre>
+  <div class="row">
+    <button id="bakeclose" type="button">Close</button>
+    <button id="bakereload" type="button" hidden>Reload the new emulator</button>
+    <button id="bakego" type="button">Bake and rebuild</button>
+  </div>
+</dialog>
 
 <footer>
   <small class="version">@VERSION@@PREVIEW@</small><br>
@@ -349,7 +384,7 @@ const KEYMAP = {};
 Object.assign(KEYMAP, { BracketLeft: { btn: B["OCT-"] }, BracketRight: { btn: B["OCT+"] } });
 const ARROWS = { ArrowUp: [EN.SELECT, 1], ArrowDown: [EN.SELECT, -1], ArrowRight: [EN.ALGORITHM, 1], ArrowLeft: [EN.ALGORITHM, -1] };
 addEventListener("keydown", (e) => {
-  if (!node || e.metaKey || e.ctrlKey || e.altKey || e.target.closest?.(".hit.knob")) return;
+  if (!node || e.metaKey || e.ctrlKey || e.altKey || e.target.closest?.(".hit.knob, dialog")) return;
   if (ARROWS[e.code]) { const [r, n] = ARROWS[e.code]; turn(knobs.find((k) => k.role === r), n); e.preventDefault(); return; }
   const m = KEYMAP[e.code];
   if (!m) return;
@@ -529,6 +564,74 @@ async function switchOn() {
   }
 }
 document.getElementById("go").addEventListener("click", switchOn);
+
+// ------------------------------------------------------------------ oergelfm1: BAKE (tools/emu_server.py)
+// The user presets in this browser's saved flash become factory presets: the server runs tools/bake_presets.py, then
+// rebuilds the firmware and this emulator. Only on that server: anywhere else /api/ping does not answer, no button.
+{
+  const $ = (id) => document.getElementById(id), dlg = $("bakedlg");
+  const flashRaw = () => { try { return JSON.parse(localStorage.getItem(STORE) || "{}"); } catch { return {}; } };
+  const api = async (path, body) => (await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" },
+                                                       body: JSON.stringify(body) })).json();
+  const el = (tag, props, ...kids) => { const e = Object.assign(document.createElement(tag), props); e.append(...kids); return e; };
+  const item = (value, text, meta, disabled) => {
+    const c = el("input", { type: "checkbox", value, disabled: !!disabled });
+    return el("li", {}, el("label", {}, c, el("span", { textContent: text }), el("span", { className: "meta", textContent: meta })));
+  };
+  // a user preset: tick, then what it becomes: a factory preset of its engine it replaces (the one it was made from
+  // first), or a new one; and its name (the factory one unless the sound was named)
+  const userItem = (p, fac) => {
+    const li = item(p.slot, p.name, `U${String(p.slot).padStart(2, "0")} ${p.ename} · ${p.cat}` +
+                    (p.bakeable ? "" : " · FM6 cannot be baked yet"), !p.bakeable);
+    if (!p.bakeable) return li;
+    const sel = el("select", { "aria-label": `What ${p.name} becomes` },
+                   ...fac.map((f) => el("option", { value: f.index, textContent: `replaces ${f.name}`, selected: f.index === p.target })),
+                   el("option", { value: "new", textContent: "added as a new preset", selected: p.target == null }));
+    const name = el("input", { type: "text", value: p.bake_name, maxLength: 12, "aria-label": "Its name" });
+    sel.addEventListener("change", () => {                // the name follows the target while it is not the user's own
+      const f = fac.find((x) => String(x.index) === sel.value);
+      if (/^[A-Z0-9]+ \d\d$/.test(p.name)) name.value = f ? f.name : p.name;
+    });
+    li.dataset.slot = p.slot;
+    li.querySelector("label").append(el("span", { textContent: "→" }), sel, name);
+    return li;
+  };
+  const show = (r) => {
+    const u = $("bakeuser"), b = $("bakebaked");
+    u.replaceChildren(...r.user.map((p) => userItem(p, (r.factory || {})[p.ename] || [])));
+    b.replaceChildren(...r.baked.map((p) => item(`${p.engine}/${p.name}`, p.name, `${p.engine} · ` +
+                                                (p.replaces ? `replaces ${p.replaces}` : "added") + " · tick to remove it")));
+    if (!r.user.length) u.replaceChildren(Object.assign(document.createElement("li"), { textContent: "None saved yet: SAVE > USER first." }));
+    if (!r.baked.length) b.replaceChildren(Object.assign(document.createElement("li"), { textContent: "None." }));
+  };
+  const busy = (on, msg) => { $("bakego").disabled = $("bakeclose").disabled = on; $("bakemsg").textContent = msg || ""; };
+  fetch("api/ping").then((r) => r.ok ? r.json() : null).then((j) => { if (j && j.bake) $("bake").hidden = false; }).catch(() => {});
+  $("bakeopen").addEventListener("click", async () => {
+    $("bakelog").hidden = $("bakereload").hidden = true;
+    busy(false, "");
+    try { show(await api("api/presets", { flash: flashRaw() })); } catch (e) { $("bakemsg").textContent = String(e); }
+    dlg.showModal();
+  });
+  $("bakeclose").addEventListener("click", () => dlg.close());
+  $("bakereload").addEventListener("click", () => location.reload());
+  $("bakego").addEventListener("click", async () => {
+    const ticked = (id) => [...$(id).querySelectorAll("input:checked")].map((c) => c.value);
+    const bake = [...$("bakeuser").querySelectorAll("li")].filter((li) => li.querySelector("input:checked"))
+      .map((li) => ({ slot: +li.dataset.slot, target: li.querySelector("select").value, name: li.querySelector("input[type=text]").value }));
+    const remove = ticked("bakebaked");
+    if (!bake.length && !remove.length) { $("bakemsg").textContent = "Tick a preset to bake (or a baked one to remove)."; return; }
+    busy(true, "Baking, then rebuilding the firmware and the emulator (about a minute)…");
+    try {
+      const r = await api("api/bake", { flash: flashRaw(), bake, remove });
+      if (r.list) show(r.list);
+      $("bakelog").textContent = [...(r.notes || []), ...(r.log || []), r.error || ""].filter(Boolean).join("\n");
+      $("bakelog").hidden = !$("bakelog").textContent;
+      busy(false, r.ok ? `Done${r.baked && r.baked.length ? ": baked " + r.baked.join(", ") : ""}. Reload to play the new firmware; ` +
+                         "for the FM-1, install build/felucca.fwsc." : "Failed: see below.");
+      $("bakereload").hidden = !r.ok;
+    } catch (e) { busy(false, "Failed: " + e); }
+  });
+}
 document.addEventListener("visibilitychange", () => send({ type: "visible", on: !document.hidden }));
 </script>
 </body>

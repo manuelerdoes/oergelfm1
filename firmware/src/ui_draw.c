@@ -1345,7 +1345,7 @@ static void splash_band(uint32_t y, uint32_t h, int32_t ly, const char *const *l
 {
     cv_begin(SPL_SQ, h, T_RAISE);
     GFX_HOOK_ALIGN(0, al0, 0, al1, mode | AL_N(2), tag);
-    cv_text_on(SPL_PAD, ly, &AF_M, l[0], T_TEXT, T_RAISE);
+    cv_text_on(SPL_PAD, ly, &AF_M, l[0], l == SPLASH_LINES ? T_THEME : T_TEXT, T_RAISE);   /* oergelfm1: the name in THEME */
     cv_text_on(SPL_PAD, ly + SPL_PITCH, &AF_M, l[1], T_TEXT, T_RAISE);
     cv_blit(SPL_X0, y);
 }

@@ -322,6 +322,9 @@ static const preset_t DRUM_PRESETS[] = {
     {"DEEP KIT", {DK_DEEP, 64, 64, 64, 64, 100, 0, 0}, {0, 100, 127, 100}, 0, 0, FX(0, 0, 0, 28), PAT(12)},
     {"TIGHT KIT", {DK_TIGHT, 64, 64, 56, 64, 100, 0, 16}, {0, 100, 127, 100}, 0, 0, FX(0, 0, 0, 8), PAT(12)},
     {"PERC KIT", {DK_PERC, 64, 64, 64, 64, 100, 0, 0}, {0, 100, 127, 100}, 0, 0, FX(0, 0, 0, 24), PAT(12)},
+#ifdef FELUCCA_BAKED_DRUM
+    FELUCCA_BAKED_DRUM   /* oergelfm1: presets baked from the emulator, appended (baked_presets.h, tools/bake_presets.py) */
+#endif
 };
 
 static const engine_t ENG_DRUM = {

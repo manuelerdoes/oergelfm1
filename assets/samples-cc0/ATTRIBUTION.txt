@@ -1,5 +1,5 @@
 Felucca SAMPLE engine - source material
-Retrieved: 2026-10-02 (first ~400 KB of each file)
+Retrieved: 2026-10-17 (first ~400 KB of each file)
 Licence: CC0 1.0 Universal (public domain dedication)
   https://creativecommons.org/publicdomain/zero/1.0/
 Sources: Versilian Studios (Sam Gossner)
@@ -14,6 +14,8 @@ PIANO/04_GPiano_sus_C5_v2_rr1_Player.wav  <-  sgossner/VCSL: Chordophones/Zither
 FLUTE/00_LDFlute_susvib_C4_v1_1.wav  <-  sgossner/VSCO-2-CE: Woodwinds/Flute/susvib/LDFlute_susvib_C4_v1_1.wav
 FLUTE/01_LDFlute_susvib_C5_v1_1.wav  <-  sgossner/VSCO-2-CE: Woodwinds/Flute/susvib/LDFlute_susvib_C5_v1_1.wav
 FLUTE/02_LDFlute_susvib_C6_v1_1.wav  <-  sgossner/VSCO-2-CE: Woodwinds/Flute/susvib/LDFlute_susvib_C6_v1_1.wav
-SAX/00_BrettTenor_NV_Main_A#1_vl2_rr1.wav  <-  sgossner/VCSL: Aerophones/Reed Aerophones/Tenor Saxophone/Non-Vibrato/BrettTenor_NV_Main_A#1_vl2_rr1.wav
-SAX/01_BrettTenor_NV_Main_A#2_vl2_rr1.wav  <-  sgossner/VCSL: Aerophones/Reed Aerophones/Tenor Saxophone/Non-Vibrato/BrettTenor_NV_Main_A#2_vl2_rr1.wav
-SAX/02_BrettTenor_NV_Main_A#3_vl2_rr1.wav  <-  sgossner/VCSL: Aerophones/Reed Aerophones/Tenor Saxophone/Non-Vibrato/BrettTenor_NV_Main_A#3_vl2_rr1.wav
+HARPSI/00_ZuckermannKitHarpsi_Normal_Sus_C1_rr1.wav  <-  sgossner/VCSL: Chordophones/Zithers/Harpsichord, English/Sustains/Normal/ZuckermannKitHarpsi_Normal_Sus_C1_rr1.wav
+HARPSI/01_ZuckermannKitHarpsi_Normal_Sus_C2_rr1.wav  <-  sgossner/VCSL: Chordophones/Zithers/Harpsichord, English/Sustains/Normal/ZuckermannKitHarpsi_Normal_Sus_C2_rr1.wav
+HARPSI/02_ZuckermannKitHarpsi_Normal_Sus_C3_rr1.wav  <-  sgossner/VCSL: Chordophones/Zithers/Harpsichord, English/Sustains/Normal/ZuckermannKitHarpsi_Normal_Sus_C3_rr1.wav
+HARPSI/03_ZuckermannKitHarpsi_Normal_Sus_C4_rr1.wav  <-  sgossner/VCSL: Chordophones/Zithers/Harpsichord, English/Sustains/Normal/ZuckermannKitHarpsi_Normal_Sus_C4_rr1.wav
+HARPSI/04_ZuckermannKitHarpsi_Normal_Sus_C5_rr1.wav  <-  sgossner/VCSL: Chordophones/Zithers/Harpsichord, English/Sustains/Normal/ZuckermannKitHarpsi_Normal_Sus_C5_rr1.wav

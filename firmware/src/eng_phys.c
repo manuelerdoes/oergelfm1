@@ -233,6 +233,9 @@ static const preset_t PHYS_PRESETS[] = {
     /* SYMP: {MODEL, CHRD, BRIT, DAMP, SYMP, ACC, BUZZ, EXC} */
     {"DRONE STRING", {PM_SYMP, 127, 80, 88, 64, 100, 92, 0}, {0, 100, 127, 90}, 0, 0, FX(0, 10, 20, 50), PAT(3)},
     {"HARP", {PM_SYMP, 8, 62, 74, 60, 90, 0, 0}, {0, 100, 127, 80}, 0, 0, FX(0, 20, 20, 60), PAT(3)},
+#ifdef FELUCCA_BAKED_PHYS
+    FELUCCA_BAKED_PHYS   /* oergelfm1: presets baked from the emulator, appended (baked_presets.h, tools/bake_presets.py) */
+#endif
 };
 
 static const engine_t ENG_PHYS = {

@@ -216,6 +216,9 @@ static const preset_t FORMANT_PRESETS[] = {
     {"VOX LEAD", {32, 0, 0, 2, 90, 8, 72, 0}, {6, 70, 105, 55}, 0, 1, FX(0, 20, 45, 40), PAT(4)},
     {"WOW BASS", {95, 0, 68, 0, 100, 0, 80, 0}, {0, 70, 70, 30}, 0, 1, FX(10, 0, 10, 10), PAT(8)},
     {"WHISPER", {0, 95, 88, 3, 50, 120, 50, 0}, {50, 90, 110, 90}, 0, 0, FX(0, 40, 30, 70), PAT(5)},
+#ifdef FELUCCA_BAKED_VOICE
+    FELUCCA_BAKED_VOICE   /* oergelfm1: presets baked from the emulator, appended (baked_presets.h, tools/bake_presets.py) */
+#endif
 };
 
 static const engine_t ENG_FORMANT = {

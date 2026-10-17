@@ -2,6 +2,9 @@
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
 /* SAMPLE: IMA ADPCM sample sets. */
 static const char *const N_ONOFF_E[] = {"OFF", "ON"};
+/* the aliases among SAMPLE's factory presets: SMP_NALIAS, and with baked presets (oergelfm1) the PERC alias and any
+ * other initializer between SMP_NPRESETS and them too (it is in npresets then: browsing skips it, preset_orig) */
+#define SMP_NALIAS_ALL (SMP_NALIAS + (BAKED_N_SAMPLE ? NELEM(SMP_PRESET_TABLE) - BAKED_N_SAMPLE - SMP_NPRESETS : 0u))
 /* IMA ADPCM sample sets (tools/gen_samples.py), native rates, zones across
  * the keyboard, loops with the ADPCM state stored at the loop start.
  * SET is P_E0 (EDIT 1, KNOB 1). SET 4 was PERC, the GM drum kit: retired, an alias of PIANO; its sounds
@@ -255,7 +258,8 @@ static const engine_t ENG_SAMPLE = {
         {"-", F_INT, 0, 0, 0, 0, 0},
     },
     .presets = SMP_PRESET_TABLE,
-    .npresets = SMP_NPRESETS,
+    .npresets = BAKED_N_SAMPLE ? NELEM(SMP_PRESET_TABLE) : SMP_NPRESETS,   /* oergelfm1: baked presets come after the
+                                                                          * PERC alias (SMP_NALIAS_ALL) */
     .note_on = sample_note_on,
     .render = sample_render,
     .knob = {P_E0, P_E4, P_ATK, P_REL},

@@ -4,6 +4,8 @@
 """Download the CC0 samples used by the SAMPLE engine into assets/samples-cc0/.
 
 The files are already in the tree; this re-creates them from the source:
+  fetch_cc0.py            every set of PICK
+  fetch_cc0.py SET ...    only these (oergelfm1: HARPSI); ATTRIBUTION / CREDITS list every file present
   https://github.com/sgossner/VSCO-2-CE  (CC0 1.0)
   https://github.com/sgossner/VCSL       (CC0 1.0)
 Only the first RANGE bytes of each WAV are downloaded.
@@ -36,6 +38,9 @@ PICK = {
     "STRINGS": (VSCO, "Strings/Violin Section/susVib", [r"_A2_v1", r"_A3_v1", r"_B4_v1"]),
     "BRASS": (VSCO, "Brass/Trumpet/sus", [r"_A2_v1_rr1", r"_C3_v1_rr1", r"_A4_v1_rr1"]),
     "FLUTE": (VSCO, "Woodwinds/Flute/susvib", [r"_C4_v1_1", r"_C5_v1_1", r"_C6_v1_1"]),
+    # oergelfm1: SAMPLE set 3 (was SAX), an English harpsichord, normal registration, one zone per octave
+    "HARPSI": (VCSL, "Chordophones/Zithers/Harpsichord, English/Sustains/Normal",
+               [r"_C1_rr1", r"_C2_rr1", r"_C3_rr1", r"_C4_rr1", r"_C5_rr1"]),
     "SAX": (VCSL, "Aerophones/Reed Aerophones/Tenor Saxophone/Non-Vibrato",
             [r"_A#1_vl2_rr1", r"_A#2_vl2_rr1", r"_A#3_vl2_rr1"]),
     "KIT": (VCSL, None, [
@@ -70,7 +75,10 @@ def fetch(repo, path, dest):
 
 def main():
     total, credits = 0, []
+    only = set(sys.argv[1:])
     for name, (repo, folder, pats) in PICK.items():
+        if only and name not in only and not (DEST / name).is_dir():
+            continue
         files = tree(repo)
         for k, p in enumerate(pats):
             d, rx = (folder, p) if folder else p
@@ -80,6 +88,8 @@ def main():
                 continue
             src = cand[0]
             dest = DEST / name / f"{k:02d}_{src.rsplit('/', 1)[1]}"
+            if only and name not in only and not dest.exists():
+                continue
             n = fetch(repo, src, dest)
             total += n
             credits.append(f"{name}/{dest.name}  <-  sgossner/{repo}: {src}")

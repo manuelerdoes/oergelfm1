@@ -268,6 +268,9 @@ static const preset_t PHASE_PRESETS[] = {
     {"RESO", {5, 0, 60, 60, 0, 0, 0, 0}, {0, 70, 30, 60}, 0, 0, FX(0, 0, 40, 40), PAT(1)},
     {"BELL", {6, 0, 80, 50, 0, 0, 0, 0}, {0, 95, 0, 90}, 0, 0, FX(0, 0, 30, 70), PAT(7)},
     {"WIRE", {4, 7, 70, 40, 7, 0, 0, 0}, {10, 80, 80, 60}, 0, 0, FX(15, 30, 30, 40), PAT(4)},
+#ifdef FELUCCA_BAKED_PHASE
+    FELUCCA_BAKED_PHASE   /* oergelfm1: presets baked from the emulator, appended (baked_presets.h, tools/bake_presets.py) */
+#endif
 };
 
 static const engine_t ENG_PHASE = {

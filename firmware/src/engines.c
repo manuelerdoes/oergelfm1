@@ -3,6 +3,8 @@
 /* Engine table (order = PRESETS browsing order and the engine numbers of the editor protocol), the
  * factory patterns (SAVE > PHRASES) and the parts' sounds at power-on. */
 #include "../engines/src/dsp.c"   /* Felucca-Engines (MIT): the shared DSP blocks */
+#include "baked_presets.h"         /* oergelfm1: presets baked from the emulator (tools/bake_presets.py): the engines'
+                                    * FELUCCA_BAKED_* hooks, BAKED[] */
 
 /* The parts' engine memory (1.5): a part plays one engine at a time, so the engines with large per-part state
  * (engine_t.mem: PHYS's slots, GRAIN's grains and index, DRUM's lanes, FM6's notes, SLICE's reverse windows)
@@ -64,6 +66,21 @@ static const engine_t *const ENGINES[NENGINES] = {
     &ENG_SLICE,                  /* 13 (FELUCCA_SLICE=0 builds without it) */
 #endif
 };
+
+/* oergelfm1: factory preset k of engine e when it is a baked one (baked_presets.h: one that replaced a factory preset,
+ * BAKED[].index, or one of the BAKED_N[e] added after them, its last presets), its BAKED[] entry; else 0 */
+static const baked_t *baked_of(uint32_t e, uint32_t k)
+{
+    uint32_t i, first, a;
+    if (e >= NENGINES || k >= ENGINES[e]->npresets)
+        return 0;
+    first = ENGINES[e]->npresets - BAKED_N[e];
+    a = k >= first ? k - first : ~0u;                   /* the a-th added one */
+    for (i = 0; i < BAKED_COUNT; i++)
+        if (BAKED[i].engine == e && (BAKED[i].index == BAKED_ADDED ? !a-- : BAKED[i].index == k))
+            return &BAKED[i];
+    return 0;
+}
 
 /* a track's engine number as an index (the audio paths: a compare, cheaper than % NENGINES; a bad number: 0) */
 static inline uint32_t eng_idx(uint32_t e) { return e < NENGINES ? e : 0u; }

@@ -19,16 +19,16 @@ static uint32_t cat_of_engine(uint32_t e) { return e == 10u || e == 13u ? CAT_DR
  * only; SAMPLE's retired PERC, past SMP_NPRESETS): its engine's (cat_of_engine). tests/ui_test.c checks every string
  * against its engine's preset count. A preset's category is a hint for browsing: nothing else reads it */
 static const char *const PRESET_CAT[16] = {
-    "LPBPBKLBULLP",              /* 0 ANALOG: SAW LEAD, SOFT PAD, SQR BASS, PWM STR, ACID, SINE KEY, RAVE, SUB BASS,
-                                  * PLUCK, BRASS, WIND, STRINGS */
+    "LPBPBKLBULLPKKK",           /* 0 ANALOG: SAW LEAD, SOFT PAD, SQR BASS, PWM STR, ACID, SINE KEY, RAVE, SUB BASS,
+                                  * PLUCK, BRASS, WIND, STRINGS; HARPSICHORD, LUTE STOP, HARPSI 16 */
     "",                          /* 1 DIGITAL (retired) */
     "LKPLUU",                    /* 2 PHASE: BRASS, ORGAN, STRING, RESO, BELL, WIRE */
     "LBLLL",                     /* 3 LOFI: PULSE LD, WAVE BASS, ARP 8BIT, WAVE LEAD, STEP LEAD */
-    "KKLL",                      /* 4 SAMPLE: PIANO, (PIANO: the retired TRANH's alias), FLUTE, SAX */
+    "KKLK",                      /* 4 SAMPLE: PIANO, (PIANO: the retired TRANH's alias), FLUTE, HARPSI (oergelfm1: was SAX) */
     "PLBF",                      /* 5 VOICE: CHOIR AAH, VOX LEAD, WOW BASS, WHISPER */
     "BLLUP",                     /* 6 TRIO: FAT BASS, ARP LEAD, SYNC LEAD, RING BELL, CHIP CHOIR */
-    "KKKKK",                     /* 7 WHEEL: the organs */
-    "PFPP",                      /* 8 GRAIN: CLOUD PAD, GLITCH, FROZEN, SHIMMER */
+    "KKKKKKKKKK",                /* 7 WHEEL: the organs; CATHEDRAL, PRINCIPAL, CRYPT FLUTE, CORNET, REQUIEM */
+    "PPP",                       /* 8 GRAIN: CLOUD PAD, FROZEN, SHIMMER (oergelfm1: GLITCH removed) */
     "UUUPUDDPU",                 /* 9 PHYS: BELL TREE, MARIMBA, PLUCK, BOWED METAL, KALIMBA, HAND DRUM, TOMS, DRONE
                                   * STRING, HARP */
     "DDDD",                      /* 10 DRUM: DRUM KIT; 1.5.6: DEEP KIT, TIGHT KIT, PERC KIT */
@@ -41,6 +41,9 @@ static uint32_t preset_cat(uint32_t e, uint32_t k)    /* factory preset k of eng
     static const char L[] = "?BLPUKDFO";               /* (a letter's index is its CAT_*) */
     const char *s = e < NELEM(PRESET_CAT) && PRESET_CAT[e] ? PRESET_CAT[e] : "";
     uint32_t i, c;
+    const baked_t *b = baked_of(e, k);                 /* oergelfm1: a baked preset's own (its user preset's) */
+    if (b)
+        return b->cat && b->cat < CAT_N ? b->cat : cat_of_engine(e);
     for (i = 0; i < k && s[i]; i++)
         ;
     for (c = 1; s[i] && L[c] && L[c] != s[i]; c++)

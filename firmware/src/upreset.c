@@ -105,6 +105,16 @@ static void up_set_cat(up_rec_t *r, uint32_t c)  /* c CAT_BASS..CAT_OTHER; a rec
         r->packed[UP_CAT_AT] = (uint8_t)c;
 }
 
+/* oergelfm1: the factory preset the sound was made from, + 1 (0 = not known), in the byte before the category,
+ * packed[UP_ORIGIN_AT]: free in the same way (a version 4 / 5 record's np values never reach it; firmware before keeps
+ * it and reads nothing there). Set when a sound is stored (up_store_cat: the track's factory preset, or the origin of the
+ * user preset it plays); tools/bake_presets.py reads it, so a baked user preset replaces the preset it was made from */
+#define UP_ORIGIN_AT (UP_CAT_AT - 1u)
+static uint32_t up_origin_of(const up_rec_t *r)  /* factory preset index + 1, 0 = not known */
+{
+    return r->ver >= 4u && r->np <= UP_ORIGIN_AT ? r->packed[UP_ORIGIN_AT] : 0u;
+}
+
 static int up_valid(const up_rec_t *r)
 {
     if (!(r->used == UP_USED && r->ver >= 1u && r->ver <= UP_VER_GRID && r->engine < NENGINES &&
@@ -410,6 +420,12 @@ static int up_store_cat(uint32_t k, const char *name, uint32_t cat)
         up_set_value(&r, i, motion_base_value(TSEL, i));
     up_pat_from(&r, TSEL->step);
     up_set_cat(&r, cat ? cat : track_cat(TSEL));
+    {   /* oergelfm1: where the sound came from (UP_ORIGIN_AT): a user preset's own origin, else the track's factory preset */
+        uint32_t u = user_of(TSEL);
+        uint32_t o = u < UP_SLOTS ? (up_rec(u)->engine == r.engine ? up_origin_of(up_rec(u)) : 0u) : TSEL->preset + 1u;
+        if (r.np <= UP_ORIGIN_AT && o < 256u)
+            r.packed[UP_ORIGIN_AT] = (uint8_t)o;
+    }
     if (drum_track(TSEL)) {                             /* a DRUM track that strikes a lane: its grid */
         uint32_t any = 0;
         for (i = 0; i < 16u; i++)

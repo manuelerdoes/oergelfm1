@@ -1288,7 +1288,7 @@ static uint32_t preset_rank(const engine_t *e, uint32_t k)
     return n;
 }
 
-#define preset_shown(e) (ENGINES[e]->npresets - (ENGINES[e]->presets == SMP_PRESET_TABLE ? SMP_NALIAS : 0u))
+#define preset_shown(e) (ENGINES[e]->npresets - (ENGINES[e]->presets == SMP_PRESET_TABLE ? SMP_NALIAS_ALL : 0u))
 
 #if !FELUCCA_FM4
 /* DIGITAL (engine 1, retired): t's sound = p, values as DIGITAL has them, converted to FM6 with a patch of its own
@@ -1377,6 +1377,12 @@ static void apply_preset_to(track_t *t, uint32_t pi)
             t->p[P_DIST + i] = (int16_t)(pr->fx[i] ? pr->fx[i] - 1 : FX_DEF[i]);
     }
     fm6_track_loaded(t);                              /* FM6: the preset's patch (its SLOT) */
+    {   /* oergelfm1: a baked preset's values beyond its preset_t (the track's own, param_kept, stay) */
+        const baked_t *b = baked_of(t->eng_req % NENGINES, pi);
+        for (i = 0; b && i < b->nkv; i++)
+            if (b->kv[i].id < P_E0 && !param_kept(b->kv[i].id))
+                t->p[b->kv[i].id] = b->kv[i].v;
+    }
     load_end(t);
 }
 
